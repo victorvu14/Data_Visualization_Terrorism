@@ -1,0 +1,187 @@
+---
+title: "Terrorism"
+author: "Group 8"
+date: "2/20/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+if(!'plotly'%in%installed.packages()){
+  install.packages('plotly')
+}
+library(plotly)
+
+if(!'plyr'%in%installed.packages()){
+  install.packages('plyr')
+}
+library(plyr)
+
+if(!'ggplot2'%in%installed.packages()){
+  install.packages('ggplot2')
+}
+library(ggplot2)
+
+if(!'waffle'%in%installed.packages()){
+  install.packages('waffle')
+}
+library(waffle)
+```
+#Data Explonatory Visualization
+
+## Terrorism trend from 2000 to 2017
+
+```{r first}
+df<-read.csv("GlobalTerrorism.csv")
+
+total<-count(df$iyear)
+fit<-fitted(loess(total$freq ~ total$x))
+
+freq_plot<- plot_ly(data = total, x = ~x, y = ~freq, type = "bar", showlegend=FALSE, marker=list(color=~freq, showscale=FALSE)) %>%
+  layout(showlegend=FALSE, title='Frequency of Attacks', xaxis = list(title='', side="right", showgrid=FALSE), yaxis=list(title='', showgrid=FALSE, showticklabels=FALSE))
+
+freq_plot
+```
+
+## Who Are The Attackers?
+```{r waffle}
+df <- read.csv("Globalterrorism.csv")
+df[,1] <- 1
+gname <- aggregate(df['eventid'], by=list(df$gname), FUN = sum)
+colnames(gname)<- c('attacker','count_attack')
+gname <- gname[order(-gname$count_attack),]
+
+Others <- sum(gname$count_attack) - sum(gname[c(2:6),2])
+
+attack_group <- c(
+  'Other Groups\n(91184)' = sum(gname$count_attack) - sum(gname[c(2:6),2]),
+  'Taliban\n(7474)' = gname[2,2],
+  'ISIS\n(5613)' = gname[3,2],
+  'Al-Shabaab\n(3288)' = gname[4,2],
+  'Boko Haram\n(2418)' = gname[5,2],
+  'Communist Party\nof India\n(1878)' =  gname[6,2]
+)
+A<-waffle(
+  attack_group / 1000, rows = 5, size = 0.5, legend_pos = "bottom", 
+  xlab = "1 square = 1000 attacks",
+  colors = c('#fee8c8','#7f0000','#d7301f','#fc8d59','#fdbb84','#fee8c8'),  
+  title = "Top 5 Attacking Groups in Proportion to all Attackers") +  
+  theme(plot.title=element_text(size = 18, hjust = 0.5, color ="#7f0000"))
+
+top_attack_group <- c(
+  'Taliban\n(7474)' = gname[2,2],
+  'ISIS\n(5613)' = gname[3,2],
+  'Al-Shabaab\n(3288)' = gname[4,2],
+  'Boko Haram\n(2418)' = gname[5,2],
+  'Communist Party\nof India\n(1878)' =  gname[6,2]
+)
+
+B<-waffle(
+  top_attack_group / 150, rows = 5, size = 0.5, legend_pos = "bottom", 
+  xlab = "1 square = 150 attacks",
+  colors = c('#7f0000','#d7301f','#fc8d59','#fdbb84','#fee8c8'),  
+  title = "Top 5 Attacking Groups") +  
+  theme(plot.title=element_text(size = 18, hjust = 0.5, color ="#7f0000"))
+
+iron(B, A)
+```
+##Who Are The Targets?
+```{r }
+cause <- aggregate(df['eventid'], by=list(df$targtype1_txt), FUN = sum)
+colnames(cause)<- c('target','count_attack')
+cause <- cause[order(-cause$count_attack),]
+
+Other_target <- sum(cause$count_attack) - sum(cause[c(1:5),2])
+
+target_group <- c(
+  'Private Citizens\n& Property\n(30610)' = gname[1,2],
+  'Military\n(18514)' = gname[2,2],
+  'Police\n(16663)' = gname[3,2],
+  'Government\n(12215)' = gname[4,2],
+  'Business\n(8969)' =  gname[5,2]
+)
+
+#Plotting Data
+
+waffle(
+  target_group / 600, rows = 5, size = 0.5, legend_pos = "bottom", 
+  xlab = "1 square = 600 attacks",
+  colors = c('#662506','#cc4c02','#ec7014','#fec44f','#fff7bc'),  
+  title = "Top 5 Attacking Targets")+ 
+  theme(plot.title=element_text(size = 18, hjust = 0.5, color ="#7f0000"))
+
+
+```
+
+## Which Region Is Most Affected? 
+``` {r second}
+aggdata <- aggregate(df['Casulties'], by=list(df$region_txt, df$iyear), FUN = sum)
+aggdata$Group.1 <- as.factor(aggdata$Group.1)
+levels(aggdata[[1]])[1] <- "Asia"
+levels(aggdata[[1]])[2] <-"Central & South America"
+levels(aggdata[[1]])[3] <-"Asia"
+levels(aggdata[[1]])[3] <-"Asia"
+levels(aggdata[[1]])[3] <-"Europe"
+levels(aggdata[[1]])[6] <-"Central & South America"
+levels(aggdata[[1]])[6] <-"Asia"
+levels(aggdata[[1]])[6] <-"Asia"
+levels(aggdata[[1]])[7] <-"Europe"
+
+Attack <- aggregate(aggdata['Casulties'], by=list(aggdata$Group.1, aggdata$Group.2), FUN = sum)
+colnames(Attack)  <- c("Region","Year","Casualties")
+
+p <- ggplot(Attack, aes(x=Year, y=Casualties, fill=Region)) + 
+   geom_area() + scale_fill_brewer(palette="OrRd") +
+  ggtitle("Total Casualties By Region From 2000 - 2018") + 
+  theme (panel.grid.major = element_blank(), 
+         panel.grid.minor = element_blank(),
+         panel.background = element_blank(),
+         strip.background =element_blank(),
+         plot.background = element_blank(),
+         axis.title = element_blank(),
+         legend.title = element_blank())
+ggplotly(p)
+
+```
+
+## A Global View 
+``` {r globe}
+mydata <- df
+jointable <- read.csv('https://raw.githubusercontent.com/plotly/datasets/master/2014_world_gdp_with_codes.csv')
+mydata[,1] <- 1
+aggdata <- aggregate(mydata['eventid'], by=list(mydata$country_txt), FUN = sum)
+colnames(aggdata)<- c('country','deaths')
+newdata <- merge(aggdata,jointable,by.x="country", by.y = "COUNTRY",  all = TRUE)
+
+
+#Set country boundaries as light grey
+l <- list(color = toRGB("#d1d1d1"), width = 0.5)
+#Specify map projection and options
+g <- list(
+  showframe = FALSE,
+  showcoastlines = FALSE,
+  projection = list(type = 'orthographic'),
+  resolution = '100',
+  showcountries = TRUE,
+  countrycolor = '#d1d1d1',
+  showocean = TRUE,
+  oceancolor = '#c9d2e0',
+  showlakes = TRUE,
+  lakecolor = '#99c0db',
+  showrivers = TRUE,
+  rivercolor = '#99c0db')
+
+#Plot
+p <- plot_geo(newdata) %>%
+  add_trace(showscale = FALSE, z = ~deaths, color = ~deaths, colors = 'Reds', text = ~country, locations = ~CODE, marker = list(line = l)) %>%
+  layout(title = 'Globe of Terrorist Attacks', geo = g)
+
+p
+```
+
+# The Full Picture of Terrorism in The Past 2 Decades 
+
+###  https://victorvu.carto.com/builder/57b186a9-9939-4632-a502-027323fe1917/embed
+
+<iframe width="100%" height="520" frameborder="0" src="https://victorvu.carto.com/builder/57b186a9-9939-4632-a502-027323fe1917/embed" allowfullscreen webkitallowfullscreen mozallowfullscreen oallowfullscreen msallowfullscreen></iframe>
